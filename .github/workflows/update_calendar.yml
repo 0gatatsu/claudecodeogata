@@ -43,16 +43,18 @@ jobs:
           fi
           echo "year=$YEAR" >> "$GITHUB_OUTPUT"
 
-          PDF_URL="${{ github.event.inputs.pdf_url }}"
-          if [ -z "$PDF_URL" ]; then
-            PDF_URL="https://www.city.isahaya.nagasaki.jp/uploaded/attachment/24461.pdf"
-          fi
-          echo "pdf_url=$PDF_URL" >> "$GITHUB_OUTPUT"
-
       - name: Parse calendar PDF
         run: |
+          PDF_FILE=$(find calendar_source/ -name "*.pdf" | sort | tail -1)
+          if [ -z "$PDF_FILE" ]; then
+            echo "エラー: calendar_source/ にPDFファイルが見つかりません。"
+            echo "諫早市のサイトからPDFをダウンロードして calendar_source/ に置いてください。"
+            echo "URL: https://www.city.isahaya.nagasaki.jp/soshiki/38/1795.html"
+            exit 1
+          fi
+          echo "PDFファイルを使用: $PDF_FILE"
           python scripts/parse_isahaya_garbage.py \
-            --pdf-url "${{ steps.params.outputs.pdf_url }}" \
+            --pdf-file "$PDF_FILE" \
             --zone "栄田町" \
             --year "${{ steps.params.outputs.year }}" \
             --output-dir docs

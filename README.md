@@ -24,13 +24,25 @@ TimeTree に自動同期
 
 リポジトリの Settings → Pages → Source を「GitHub Actions」に設定してください。
 
-### 2. 初回カレンダー更新を実行する
+### 2. 諫早市のPDFをダウンロードして配置する（毎年4月に実施）
+
+諫早市のサイトから直接ダウンロードできないため、年1回手動でPDFを配置します。
+
+1. [諫早市 各地域のごみの収集日程](https://www.city.isahaya.nagasaki.jp/soshiki/38/1795.html) を開く
+2. 最新年度のPDF（例: 「令和8年度 ごみと資源物カレンダー」）をダウンロード
+3. ダウンロードしたPDFを `calendar_source/` フォルダに入れてコミット・プッシュ
+
+```bash
+# ダウンロードしたPDFをリポジトリに追加する例
+cp ~/Downloads/isahaya_calendar_r8.pdf calendar_source/
+git add calendar_source/
+git commit -m "令和8年度ごみカレンダーPDFを追加"
+git push
+```
+
+### 3. カレンダー更新を実行する
 
 Actions タブ → 「諫早市ごみカレンダー更新」→ 「Run workflow」
-
-**PDFのURLについて:** 諫早市は毎年新しいPDFをアップロードします。URLが変わった場合は、
-[各地域のごみの収集日程](https://www.city.isahaya.nagasaki.jp/soshiki/38/1795.html)
-で最新のURLを確認し、ワークフローの「pdf_url」に入力してください。
 
 ### 3. iOSショートカットを設定する
 
