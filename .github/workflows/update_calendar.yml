@@ -1,0 +1,91 @@
+name: 諫早市ごみカレンダー更新
+
+on:
+  schedule:
+    # 毎年4月5日 00:00 UTC（= 9:00 JST）に自動実行
+    # 諫早市が新年度PDFを4月初旬に公開するため、5日以降に実行
+    - cron: '0 0 5 4 *'
+  workflow_dispatch:
+    inputs:
+      pdf_url:
+        description: '諫早市PDFのURL（省略時はデフォルトURL使用）'
+        required: false
+        default: ''
+      year:
+        description: '年度の開始年（例: 2026なら2026年4月〜2027年3月）省略時は実行年'
+        required: false
+        default: ''
+
+jobs:
+  update-calendar:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pages: write
+      id-token: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install dependencies
+        run: pip install -r scripts/requirements.txt
+
+      - name: Determine parameters
+        id: params
+        run: |
+          YEAR="${{ github.event.inputs.year }}"
+          if [ -z "$YEAR" ]; then
+            YEAR=$(date +%Y)
+          fi
+          echo "year=$YEAR" >> "$GITHUB_OUTPUT"
+
+          PDF_URL="${{ github.event.inputs.pdf_url }}"
+          if [ -z "$PDF_URL" ]; then
+            PDF_URL="https://www.city.isahaya.nagasaki.jp/uploaded/attachment/24461.pdf"
+          fi
+          echo "pdf_url=$PDF_URL" >> "$GITHUB_OUTPUT"
+
+      - name: Parse calendar PDF
+        run: |
+          python scripts/parse_isahaya_garbage.py \
+            --pdf-url "${{ steps.params.outputs.pdf_url }}" \
+            --zone "栄田町" \
+            --year "${{ steps.params.outputs.year }}" \
+            --output-dir docs
+
+      - name: Commit updated calendar files
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add docs/
+          if git diff --staged --quiet; then
+            echo "変更なし（スキップ）"
+          else
+            git commit -m "ごみカレンダー更新 $(date +%Y-%m-%d) [skip ci]"
+            git push origin HEAD
+          fi
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: docs/
+
+  deploy-pages:
+    needs: update-calendar
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    permissions:
+      pages: write
+      id-token: write
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
